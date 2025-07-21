@@ -1,0 +1,412 @@
+openapi: "3.0.0"
+info:
+  title: "Order Service API"
+  version: "0.0.1"
+components:
+  schemas:
+    OrderRequest:
+      type: object
+      required:
+        - products
+        - contact
+        - partnerId
+        - installationSite
+        - type
+        - serviceId
+        - actionDate
+      properties:
+        products:
+          type: array
+          items:
+            type: object
+            required:
+              - productId
+            properties:
+              productId:
+                $ref: '#/components/schemas/uuid'
+        contact:
+          type: object
+          required:
+            - firstName
+            - lastName
+            - email
+            - telephone
+          properties:
+            firstName:
+              $ref: '#/components/schemas/firstName'
+            lastName:
+              $ref: '#/components/schemas/lastName'
+            email:
+              type: string
+              format: email
+            telephone:
+              $ref: '#/components/schemas/phoneNumber'
+            companyName:
+              $ref: '#/components/schemas/companyName'
+        partnerId:
+          $ref: '#/components/schemas/uuid'
+        installationSite:
+          type: object
+          required:
+            - uprn
+          properties:
+            uprn:
+              $ref: '#/components/schemas/uprn'
+        type:
+          $ref: '#/components/schemas/orderType'
+        serviceId:
+          allOf:
+            - nullable: true
+            - $ref: '#/components/schemas/uuid'
+        actionDate:
+          $ref: '#/components/schemas/date'
+    OrderResponse:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        orderNumber:
+          type: string
+          example: '00004613'
+        orderDate:
+          $ref: '#/components/schemas/date'
+        status:
+          type: string
+          example: 'Draft'
+        type:
+          $ref: '#/components/schemas/orderType'
+        serviceId:
+          $ref: '#/components/schemas/uuid'
+        partnerId:
+          $ref: '#/components/schemas/uuid'
+        contact:
+          type: object
+          properties:
+            firstName:
+              $ref: '#/components/schemas/firstName'
+            lastName:
+              $ref: '#/components/schemas/lastName'
+            telephone:
+              $ref: '#/components/schemas/phoneNumber'
+            email:
+              type: string
+              format: email
+        installationSite:
+          type: object
+          properties:
+            uprn:
+              $ref: '#/components/schemas/uprn'
+            streetNumber:
+              type: string
+              example: '1994'
+            street:
+              type: string
+              example: 'Abbey Road'
+            postcode:
+              type: string
+              example: 'E1 6AN'
+        serviceDelivery:
+          type: object
+          properties:
+                survey:
+                  $ref: '#/components/schemas/serviceDeliveryBookingEntity'
+                wayleave:
+                  type: object
+                  properties:
+                    sent:
+                      type: object
+                      properties:
+                        date:
+                          $ref: '#/components/schemas/date'
+                        delayReason:
+                          type: string
+                    signed:
+                      type: object
+                      properties:
+                        date:
+                          $ref: '#/components/schemas/date'
+                        delayReason:
+                          type: string
+                installation:
+                  $ref: '#/components/schemas/serviceDeliveryBookingEntity'
+        products:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                $ref: '#/components/schemas/uuid'
+              productName:
+                type: string
+                example: 'Hunt Group'
+        streetUnit:
+          type: object
+          properties:
+            name:
+              type: string
+            cabName:
+              type: string
+            olt:
+              type: string
+            pre-agg:
+              type: string
+        circuitConfiguration:
+          type: object
+          properties:
+            ontId:
+              type: string
+            ontSerialNo:
+              type: string
+            servicePort:
+              type: string
+            sTag:
+              type: string
+            cTag:
+              type: string
+            f:
+              type: string
+            s:
+              type: string
+            p:
+              type: string
+        createdBy:
+          type: string
+          example: 'John'
+        createdAt:
+          $ref: '#/components/schemas/date'
+        updatedBy:
+          type: string
+          example: 'David'
+        updatedAt:
+          $ref: '#/components/schemas/date'
+    GetOrderCollectionResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderResponse'
+    GetOrderCollectionPaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderResponse'
+        pages:
+          type: object
+          properties:
+            totalRows:
+              type: integer
+              format: int32
+            pageNum:
+              type: integer
+              format: int32
+            pageSize:
+              type: integer
+              format: int32
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Invalid request body params'
+        errors:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            products: '"products" is required'
+            contact: '"contact" must be of type object'
+    InternalServerError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "DB Connection Error"
+    serviceDeliveryBookingEntity:
+      type: object
+      properties:
+        booked:
+          type: object
+          properties:
+            date:
+              $ref: '#/components/schemas/date'
+            delayReason:
+              type: string
+            appointments:
+              type: array
+              items:
+                type: object
+                properties:
+                  appointmentId:
+                    type: string
+                    format: uuid
+        completed:
+          type: object
+          properties:
+            date:
+              $ref: '#/components/schemas/date'
+            delayReason:
+              type: string
+    uuid:
+      type: string
+      format: uuid
+      example: '3fa85f64-5717-4562-b3fc-2c963f66afa6'
+    uprn:
+      type: string
+      example: '101166'
+    orderType:
+      type: string
+      enum: ['New Business', 'Upgrade', 'Downgrade']
+    date:
+      type: string
+      format: date
+    firstName:
+      type: string
+      example: 'John'
+    lastName:
+      type: string
+      example: 'Smith'
+    phoneNumber:
+      type: string
+      example: '+44 1434 634996'
+    companyName:
+      type: string
+      example: 'G-Network'
+paths:
+  /order:
+    get:
+      description: "Returns order collection"
+      parameters:
+        - in: query
+          name: pageNum
+          schema:
+            type: integer
+            format: int32
+            example: 2
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            format: int32
+            example: 10
+        - in: query
+          name: partnerId
+          schema:
+            type: string
+            format: uuid
+            example: 'e7abca9c-c049-11ea-b3de-0242ac130004'
+      responses:
+        200:
+          description: "order collection"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/GetOrderCollectionResponse'
+                  - $ref: '#/components/schemas/GetOrderCollectionPaginatedResponse'
+        400:
+          description: 'validation error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        500:
+          description: 'internal server error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+    post:
+      description: "Creates order"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+      responses:
+        200:
+          description: 'order created successfully'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    $ref: '#/components/schemas/uuid'
+                  serviceId:
+                    $ref: '#/components/schemas/uuid'
+        400:
+          description: 'validation error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        500:
+          description: 'internal server error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+  /order/{id}:
+    parameters:
+      - in: path
+        name: id
+        schema:
+          $ref: '#/components/schemas/uuid'
+        required: true
+    get:
+      description: "Returns order by id"
+      responses:
+        200:
+          description: 'order'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        400:
+          description: 'validation error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        500:
+          description: 'internal server error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+    patch:
+      description: "Modifies order"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/OrderRequest'
+                - type: object
+      responses:
+        200:
+          description: 'Order updated successfully'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    $ref: '#/components/schemas/uuid'
+        400:
+          description: 'validation error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        500:
+          description: 'internal server error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'

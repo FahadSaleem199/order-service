@@ -1,0 +1,175 @@
+org: gnetworkdev
+service: order-service
+provider:
+  name: aws
+  vpc: ${file(sls_configs/vpc_${self:custom.profile}.yml)}
+  region: eu-west-2
+  stackName: ${self:custom.serviceStageShort}-stack
+  stackTags:
+    SERVICE: ${self:service}
+    STAGE_SHORT: ${self:custom.stageShort}
+    HASH: ${self:custom.stageHash}
+  apiName: ${self:custom.serviceStageShort}-api
+  runtime: nodejs12.x
+  stage: ${self:custom.stage}
+  role: LambdaRole
+  environment: ${file(sls_configs/env_${self:custom.profile}.yml)}
+custom:
+  stageShort: ${file(./serverless.vars.js):stageShort}
+  stageHash: ${file(./serverless.vars.js):stageHash}
+  serviceStageShort: ${self:service}-${self:custom.stageShort}
+  snsTopicsPrefix: '_${file(./serverless.vars.js):snsTopicsPrefix}'
+  updateOrderCircuitSqs: '${ssm:/${self:custom.profile}/common/update_order_circuit_sqs~true}_${self:custom.stageHash}'
+  orderCancelledTopic: 'ORDER_CANCELLED_${self:custom.stageHash}'
+  orderCancelledSNS: { "Fn::Join" : ['', ['arn:aws:sns:${self:provider.region}:', { 'Ref' : 'AWS::AccountId' }, ':${self:custom.orderCancelledTopic}']] }
+  wsOrderCreatedTopic: 'WS_ORDER_CREATED_${self:custom.stageHash}'
+  wsOrderCreatedSNS: { "Fn::Join" : ['', ['arn:aws:sns:${self:provider.region}:', { 'Ref' : 'AWS::AccountId' }, ':${self:custom.wsOrderCreatedTopic}']] }
+  tagsReservedSNSTopic: 'TAGS_RESERVED${self:custom.snsTopicsPrefix}'
+  profile: ${file(./serverless.vars.js):profile}
+  stage: ${file(./serverless.vars.js):stage}
+  
+functions:
+  api:
+    handler: src/index.handler
+    name: ${self:service}-${self:custom.stageShort}
+    timeout: 60
+    events:
+      - http:
+          path: /
+          method: ANY
+      - http:
+          path: /{any+}
+          method: ANY
+  updateOrderCircuit:
+    handler: src/index.updateOrderCircuit
+    name: ${self:service}-updateOrderCircuit-${self:custom.stageHash}
+    role: UpdateOrderCircuitRole
+    events:
+      - sqs:
+          arn: { "Fn::Join" : [':', ['arn:aws:sqs:${self:provider.region}', { 'Ref' : 'AWS::AccountId' }, '${self:custom.updateOrderCircuitSqs}']] }
+  tagsReserved:
+    handler: src/index.tagsReserved
+    name: ${self:service}-tagsReserved-${self:custom.stageHash}
+    events:
+      - sns:
+          arn:
+            Fn::Join: [':', ['arn:aws:sns', '${self:provider.region}', { 'Ref': 'AWS::AccountId' }, '${self:custom.tagsReservedSNSTopic}']]
+          topicName: '${self:custom.tagsReservedSNSTopic}'
+resources:
+  Resources:
+    LambdaRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: '${self:custom.serviceStageShort}-lambdaRole'
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: '${self:custom.serviceStageShort}-lambda'
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - 'logs:CreateLogStream'
+                    - 'logs:CreateLogGroup'
+                  Resource: [
+                    'arn:aws:logs:${self:provider.region}:*:log-group:/aws/lambda/${self:custom.serviceStageShort}*:*',
+                    'arn:aws:logs:${self:provider.region}:*:log-group:/aws/lambda/${self:functions.tagsReserved.name}*:*'
+                  ]
+                - Effect: Allow
+                  Action:
+                    - 'logs:PutLogEvents'
+                  Resource: [
+                    'arn:aws:logs:${self:provider.region}:*:log-group:/aws/lambda/${self:custom.serviceStageShort}*:*:*',
+                    'arn:aws:logs:${self:provider.region}:*:log-group:/aws/lambda/${self:functions.tagsReserved.name}*:*:*'
+                  ]
+                - Effect: Allow
+                  Action:
+                    - 'sns:Publish'
+                  Resource: '*'
+                - Effect: Allow
+                  Action:
+                    - 'ec2:CreateNetworkInterface'
+                    - 'ec2:DescribeNetworkInterfaces'
+                    - 'ec2:DeleteNetworkInterface'
+                  Resource: '*'
+    UpdateOrderCircuitSQS:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: '${self:custom.updateOrderCircuitSqs}'
+    UpdateOrderCircuitRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: '${self:service}-updateOrderCircuit-${self:custom.stageHash}-lambdaRole'
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: '${self:service}-updateOrderCircuit-${self:custom.stageHash}-lambda'
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - 'logs:CreateLogStream'
+                    - 'logs:CreateLogGroup'
+                  Resource: 'arn:aws:logs:${self:provider.region}:*:log-group:/aws/lambda/${self:service}-updateOrderCircuit-${self:custom.stageHash}*:*'
+                - Effect: Allow
+                  Action:
+                    - 'logs:PutLogEvents'
+                  Resource: 'arn:aws:logs:${self:provider.region}:*:log-group:/aws/lambda/${self:service}-updateOrderCircuit-${self:custom.stageHash}*:*:*'
+                - Effect: Allow
+                  Action:
+                    - 'sqs:ReceiveMessage'
+                    - 'sqs:DeleteMessage'
+                    - 'sqs:GetQueueAttributes'
+                  Resource: 'arn:aws:sqs:${self:provider.region}:*:${self:custom.updateOrderCircuitSqs}'
+                - Effect: Allow
+                  Action:
+                    - 'ec2:CreateNetworkInterface'
+                    - 'ec2:DescribeNetworkInterfaces'
+                    - 'ec2:DeleteNetworkInterface'
+                  Resource: '*'
+
+    OrderCancelledNotificationTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: '${self:custom.orderCancelledTopic}'
+        DisplayName: '${self:custom.orderCancelledTopic}'
+    WholesaleOrderCreatedNotificationTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ${self:custom.wsOrderCreatedTopic}
+        DisplayName: ${self:custom.wsOrderCreatedTopic}
+
+outputs:
+  stage: ${self:provider.stage}
+  stageShort: ${self:custom.stageShort}
+  hash: ${self:custom.stageHash}
+  stack: ${self:provider.stackName}
+  api: ${self:provider.apiName}
+  db: ${self:service}-${self:custom.stageHash}
+
+plugins:
+  - serverless-offline
+  - serverless-plugin-include-dependencies
+
+package:
+  exclude:
+    - './**/*.test.js'
+    - '.idea/**'
+    - '.git/**'
+    - '.vscode/**'
+    - '.directory'
+    - '.editorconfig'

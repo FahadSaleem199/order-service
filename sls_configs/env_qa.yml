@@ -1,0 +1,12 @@
+    PROPERTY_SERVICE_URL: '${ssm:/develop/common/property_service_uri~true}'
+    PRODUCT_SERVICE_URL: '${ssm:/develop/common/product_service_uri~true}'
+    APPOINTMENT_SERVICE_URL: '${ssm:/develop/common/appointment_service_uri~true}'
+    UPDATE_ORDER_CIRCUIT_SQS: ${ssm:/develop/common/update_order_circuit_sqs~true}
+    SALESFORCE_URL: ${ssm:/dev/loginUrl~true}
+    SALESFORCE_USERNAME: ${ssm:/dev/new_username~true}
+    SALESFORCE_PASSWORD: ${ssm:/dev/new_password~true}
+    SERVICE_NAME: ${self:service}
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+    ORDER_CANCELLED_SNS_TOPIC_ARN: ${self:custom.orderCancelledSNS}
+    WS_ORDER_CREATED_SNS_TOPIC_ARN: ${self:custom.wsOrderCreatedSNS}

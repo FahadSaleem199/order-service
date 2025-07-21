@@ -1,0 +1,12 @@
+    PROPERTY_SERVICE_URL: '${ssm:/sandbox/common/property_service_uri~true}'
+    PRODUCT_SERVICE_URL: '${ssm:/sandbox/common/product_service_uri~true}'
+    APPOINTMENT_SERVICE_URL: '${ssm:/sandbox/common/appointment_service_uri~true}'
+    SALESFORCE_URL: ${ssm:/sandbox/common/loginUrl~true}
+    SALESFORCE_USERNAME: ${ssm:/sandbox/common/new_username~true}
+    SALESFORCE_PASSWORD: ${ssm:/sandbox/common/new_password~true}
+    UPDATE_ORDER_CIRCUIT_SQS: ${ssm:/sandbox/common/update_order_circuit_sqs~true}
+    SERVICE_NAME: ${self:service}
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+    ORDER_CANCELLED_SNS_TOPIC_ARN: ${self:custom.orderCancelledSNS}
+    WS_ORDER_CREATED_SNS_TOPIC_ARN: ${self:custom.wsOrderCreatedSNS}

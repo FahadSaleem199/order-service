@@ -1,0 +1,5 @@
+  securityGroupIds:
+    - sg-01
+  subnetIds:
+    - subnet-0e
+    - subnet-0d
