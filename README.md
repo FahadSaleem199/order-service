@@ -1,4 +1,4 @@
-# Order service
+# Order service using Lambda and Serverless Framework
 
 ## Installation
 
